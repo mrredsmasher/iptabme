@@ -14,12 +14,6 @@ function check()
 	
 	sudo iptables -L ${chain_from} | grep ${chain_name} &> /dev/null
 	return $?
-	#if [[ "$?" == "0" ]]; then
-	#	# si que existe TRYHACKME en INPUT
-	#	return 0
-	#else
-	#	return 1
-	#fi
 }
 
 function info()
