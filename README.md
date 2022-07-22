@@ -4,6 +4,8 @@ This is a simple script which will create some iptables rules to isolate you fro
 
 Inspired on https://github.com/Wh1teDrvg0n/safeVPN-THM.git
 
+The original script will flush everything and if you are working with Docker or other rules in your VM you may have some issues. This is the main difference with this script. Ive created a specific chain named TRYHACKME so it shouldn't affect your fail2ban, docker, etc rules.
+
 # Usage
 
 Once connected to the VPN, deploy a machine, grab the IP address and then use the script:
