@@ -59,7 +59,7 @@ function create()
 
 	clean ${chain_name}
 
-	info "Adding ${2} as an allowed IP"
+	info "Adding ${ip} as an allowed IP"
 	sleep 2
 	
 	# creamos new chain
