@@ -1,0 +1,152 @@
+#!/bin/bash
+
+# Author: @Mr_RedSmasher
+# Description: Simple Bash script which creates some iptables rules which will only accept connections from the TryHackMe deployed device
+# Inspired in the following script: https://github.com/Wh1teDrvg0n/safeVPN-THM.git
+
+
+function check()
+{
+	# TODO: No me convence mucho esta forma de comprobarlo, pending revision
+
+	chain_from=${1}
+	chain_name=${2}
+	
+	sudo iptables -L ${chain_from} | grep ${chain_name} &> /dev/null
+	return $?
+	#if [[ "$?" == "0" ]]; then
+	#	# si que existe TRYHACKME en INPUT
+	#	return 0
+	#else
+	#	return 1
+	#fi
+}
+
+function info()
+{
+	BLUE="\033[0;34m"
+	NC="\033[0m"
+	echo -e "${BLUE}[INFO]${NC} ${1}"
+}
+
+function banner()
+{
+	RED="\033[0;31m"
+	NC="\033[0m"
+	echo -ne "\n"
+	echo '88 88""Yb 888888    db    88""Yb 8b    d8 888888 '
+	echo '88 88__dP   88     dPYb   88__dP 88b  d88 88__   '
+	echo '88 88"""    88    dP__Yb  88""Yb 88YbdP88 88""   '
+	echo '88 88       88   dP""""Yb 88oodP 88 YY 88 888888 '
+	echo -ne "\n\n			Author: ${RED}@Mr_RedSmasher${NC}\n\n"
+}
+
+function usage()
+{
+	echo "Usage: ${0} <clean>: Deletes TryHackMe chain and related links" 
+	echo "Usage: ${0} <create> <IP>: Deletes previous TryHackMe chain and create a new chain + add the rules" 
+	echo "Examples:"
+	echo -ne "\t- ${0} create 10.10.12.21\n"
+	echo -ne "\t- ${0} clean\n\n"
+	exit 1
+
+}
+
+function goodbye()
+{
+	info "Good bye!"
+	exit $1
+}
+
+function create()
+{
+	ip=${1}
+	chain_name=${2}
+
+	clean ${chain_name}
+
+	info "Adding ${2} as an allowed IP"
+	sleep 2
+	
+	# creamos new chain
+	info "Creating Chain if does not exist"
+	# TODO: Deberia hacerlo solo la primera vez
+	sudo iptables -N ${chain_name} &> /dev/null
+
+	# ping - solo aceptamos de la maquina
+	info "Rules for ping (request/reply)"
+	sudo iptables -A ${chain_name} -i tun0 -p icmp -s $ip --icmp-type echo-request -j ACCEPT
+	sudo iptables -A ${chain_name} -i tun0 -p icmp -s $ip --icmp-type echo-reply -j ACCEPT
+	# ping - rechazaremos del resto
+	sudo iptables -A ${chain_name} -i tun0 -p icmp --icmp-type echo-request -j DROP
+	sudo iptables -A ${chain_name} -i tun0 -p icmp --icmp-type echo-reply -j DROP
+	
+	# aceptamos in y out para la maquina tcp y udp
+	info "Rules inout for tcp and udp"
+	sudo iptables -A ${chain_name} -i tun0  -p tcp -s $ip -j ACCEPT
+	sudo iptables -A ${chain_name} -o tun0  -p tcp -s $ip -j ACCEPT
+	sudo iptables -A ${chain_name} -i tun0  -p udp -s $ip -j ACCEPT
+	sudo iptables -A ${chain_name} -o tun0  -p udp -s $ip -j ACCEPT
+	
+	# rechazaremos del resto
+	info "DROP for other inputs"
+	#iptables -A ${chain_name} -o tun0 -j DROP
+	sudo iptables -A ${chain_name} -i tun0 -j DROP
+	
+	# TODO: Deberia hacerlo solo la primera vez
+	# agregamos la chain nueva tanto en in como out
+	info "Adding chain to INPUT and OUTPUT"
+	sudo iptables -A INPUT -i tun0 -j ${chain_name}
+	sudo iptables -A OUTPUT -o tun0 -j ${chain_name}
+
+}
+
+function clean()
+{
+	chain_name=${1}	
+
+	info "Checking for existing TRYHACKME rules...."
+	sleep 2
+
+	check INPUT ${chain_name}
+	input=$?
+	check OUTPUT ${chain_name}
+	output=$?
+	
+
+	if [[ "${input}" -eq 0 ]] && [[ "${output}" -eq 0 ]]; then
+		info "TRYHACKME Chain found"
+		info "Flushing ${chain_name} Chain..."
+		sleep 1
+		sudo iptables -F ${chain_name}
+		info "Cleaning references"
+		sudo iptables -D INPUT -i tun0 -j ${chain_name}
+		sudo iptables -D OUTPUT -o tun0 -j ${chain_name}
+		info "Deleting Chain"
+		sudo iptables -X ${chain_name}
+		info "Done!"
+
+	else
+		info "Nothing to do"
+	fi
+}
+
+chain_name="TRYHACKME"
+banner
+
+if [[ $# -lt 1 ]]; then
+	usage
+fi
+
+if [[ "$1" == "clean" ]]; then
+	clean ${chain_name}
+	goodbye 0
+fi
+
+if [[ "$1" == "create" ]] && [[ $# -eq 2 ]]; then
+	create $2 ${chain_name}
+	goodbye 0
+
+else
+	usage
+fi
