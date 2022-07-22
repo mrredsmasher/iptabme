@@ -70,7 +70,6 @@ function create()
 	
 	# creamos new chain
 	info "Creating Chain if does not exist"
-	# TODO: Deberia hacerlo solo la primera vez
 	sudo iptables -N ${chain_name} &> /dev/null
 
 	# ping - solo aceptamos de la maquina

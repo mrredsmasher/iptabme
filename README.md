@@ -1,6 +1,8 @@
 # Introduction
 
-This is a simple script TryHackMe VPN "isolation" inspired on https://github.com/Wh1teDrvg0n/safeVPN-THM.git
+This is a simple script which will create some iptables rules to isolate you from other TryHackMe VPN users. 
+
+Inspired on https://github.com/Wh1teDrvg0n/safeVPN-THM.git
 
 # Usage
 
